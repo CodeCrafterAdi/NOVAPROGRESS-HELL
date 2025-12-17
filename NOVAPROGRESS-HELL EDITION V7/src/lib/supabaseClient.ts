@@ -1,5 +1,2 @@
-// IMPORTANT:
-// This file must NOT create a Supabase client.
-// It only re-exports the single global client.
-
+// src/lib/supabaseClient.ts
 export { supabase } from '../../../lib/supabaseClient';

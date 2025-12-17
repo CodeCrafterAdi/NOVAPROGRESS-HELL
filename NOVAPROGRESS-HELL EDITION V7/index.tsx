@@ -1,17 +1,18 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Page from './app/page';
-import { AuthProvider } from './context/AuthContext.tsx'; // ← NEW: Import AuthProvider
+import { AuthProvider } from './src/auth/AuthContext.tsx'; // ← FIXED: Correct path to your file
+
 // We import page from app/page which acts as the new App root.
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-throw new Error("Could not find root element to mount to");
+  throw new Error("Could not find root element to mount to");
 }
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-<React.StrictMode>
-<AuthProvider> {/* ← NEW: Wrap Page in AuthProvider */}
-<Page />
-</AuthProvider>
-</React.StrictMode>
+  <React.StrictMode>
+    <AuthProvider> {/* ← Keeps the wrapper for auth loading fix */}
+      <Page />
+    </AuthProvider>
+  </React.StrictMode>
 );

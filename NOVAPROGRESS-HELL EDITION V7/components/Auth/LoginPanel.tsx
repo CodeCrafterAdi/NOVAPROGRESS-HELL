@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
@@ -19,13 +18,12 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
   const [videoError, setVideoError] = useState(false);
 
   // --- HANDLERS ---
-
   const handleProviderLogin = async (provider: 'google' | 'github') => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: window.location.origin, // ← FIXED: Redirect to root for reliable session restore on all devices
       },
     });
     if (error) {
@@ -44,7 +42,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: window.location.origin, // ← Also updated for consistency (was /auth/callback)
       },
     });
     if (error) {
@@ -57,11 +55,11 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="relative w-full min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#050000] text-white selection:bg-red-900 selection:text-white font-sans">
-      
+     
       {/* GLOBAL BACKGROUND */}
       <div className="absolute inset-0 z-0">
         {!videoError ? (
-            <video 
+            <video
               src={BG_VIDEO_URL} autoPlay loop muted playsInline preload="auto"
               onError={() => setVideoError(true)}
               className="w-full h-full object-cover opacity-30 transition-opacity duration-1000 grayscale contrast-125 brightness-50"
@@ -72,7 +70,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#000_90%)]" />
       </div>
 
-      <motion.div 
+      <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "circOut" }}
@@ -80,14 +78,14 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
       >
           {/* HEADER */}
           <div className="text-center mb-10">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
                 className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-red-900/30 bg-black/50 backdrop-blur-md mb-6"
               >
                   <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
                   <span className="text-[10px] font-mono tracking-[0.2em] text-red-500 uppercase">SYSTEM V8 ONLINE</span>
               </motion.div>
-              
+             
               <h1 className="text-5xl md:text-7xl font-display font-black tracking-tighter text-white mb-2 drop-shadow-2xl">
                   NOVA<span className="text-red-600">PRO</span>
               </h1>
@@ -95,7 +93,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div className="bg-black/60 backdrop-blur-xl border border-white/10 p-8 md:p-10 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative rounded-2xl">
-              
+             
               {/* Corner Accents */}
               <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-white/20 rounded-tl-xl" />
               <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-white/20 rounded-tr-xl" />
@@ -104,7 +102,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
 
               <div className="space-y-4">
                   {/* SOCIAL LOGIN: GOOGLE */}
-                  <button 
+                  <button
                       onClick={() => handleProviderLogin('google')}
                       disabled={loading}
                       className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-gradient-to-b from-gray-800 to-black border border-white/20 hover:border-white/50 hover:from-gray-700 hover:to-gray-900 transition-all group shadow-lg"
@@ -114,7 +112,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
                   </button>
 
                   {/* SOCIAL LOGIN: GITHUB */}
-                  <button 
+                  <button
                       onClick={() => handleProviderLogin('github')}
                       disabled={loading}
                       className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-black border border-white/20 hover:border-white/50 hover:bg-white/5 transition-all group"
@@ -131,14 +129,14 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
 
                   {/* EMAIL LOGIN */}
                   <form onSubmit={handleEmailLogin} className="space-y-4">
-                      <input 
-                          type="email" 
-                          placeholder="OPERATIVE EMAIL" 
+                      <input
+                          type="email"
+                          placeholder="OPERATIVE EMAIL"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="w-full bg-black border border-white/20 rounded-xl p-4 text-xs font-mono text-white placeholder-gray-600 focus:border-red-500 focus:outline-none transition-colors text-center uppercase tracking-wider"
                       />
-                      <MirrorButton 
+                      <MirrorButton
                           text={loading ? "SENDING..." : "INITIATE LINK"}
                           onClick={() => {}}
                           className="!w-full !py-4 !text-xs !border-white/20 hover:border-white"
@@ -147,14 +145,13 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLoginSuccess }) => {
                   </form>
               </div>
           </div>
-          
+         
           {/* Footer DECOR */}
           <div className="mt-12 flex justify-center gap-8 opacity-30">
               <div className="w-1 h-8 bg-gradient-to-b from-transparent via-red-500 to-transparent" />
               <div className="w-1 h-8 bg-gradient-to-b from-transparent via-red-500 to-transparent" />
               <div className="w-1 h-8 bg-gradient-to-b from-transparent via-red-500 to-transparent" />
           </div>
-
       </motion.div>
     </div>
   );

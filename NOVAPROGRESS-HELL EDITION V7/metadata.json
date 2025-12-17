@@ -1,0 +1,8 @@
+{
+  "name": "NovaProgress — Hell Edition",
+  "description": "The ultimate dark/red cinematic self-mastery app with realtime tracking and workflow visualization.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

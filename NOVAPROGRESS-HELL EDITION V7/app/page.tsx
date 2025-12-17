@@ -1,13 +1,9 @@
-
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
-
 // Providers
 import { NotificationProvider } from '../components/UI/NotificationProvider';
-
 // Components
 import LoginPanel from '../components/Auth/LoginPanel';
 import DashboardShell from '../components/HUD/DashboardShell';
@@ -20,6 +16,7 @@ export default function Page() {
   // START DIRECTLY AT LOGIN (Skipping Intro/System Check)
   const [stage, setStage] = useState<Stage>('LOGIN');
   const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true); // ← NEW: Prevents premature decisions
 
   // Simple routing for Auth Callback
   if (typeof window !== 'undefined' && window.location.pathname === '/auth/callback') {
@@ -28,19 +25,29 @@ export default function Page() {
 
   useEffect(() => {
     const checkUser = async () => {
+      setLoading(true); // Start loading
+
       // Check existing Supabase session
       const { data: { session: existingSession } } = await supabase.auth.getSession();
-      
+     
       if (existingSession) {
         handleLoginSuccess(existingSession.user.id);
+      } else {
+        setLoading(false); // No session → safe to show LOGIN
       }
     };
+
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session) {
-            handleLoginSuccess(session.user.id);
-        }
+      if (session) {
+        handleLoginSuccess(session.user.id);
+      } else {
+        // User logged out or session expired
+        setUserId(null);
+        setStage('LOGIN');
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -55,9 +62,10 @@ export default function Page() {
   const checkProfileAndRedirect = async (id: string) => {
     // Check Local Storage first for speed
     const localProfile = localStorage.getItem(`nova_profile_${id}`);
-    
+   
     if (localProfile) {
       setStage('DASHBOARD');
+      setLoading(false);
     } else {
       // Fallback: Check remote DB
       try {
@@ -70,6 +78,8 @@ export default function Page() {
       } catch (e) {
           // If remote fails and no local, default to Onboarding
           setStage('ONBOARDING');
+      } finally {
+        setLoading(false); // ← Always end loading after check
       }
     }
   };
@@ -78,13 +88,22 @@ export default function Page() {
     setStage('DASHBOARD');
   };
 
+  // ← NEW: Show nothing or a simple loader while Supabase restores session
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black text-white">
+        <p>Loading session...</p>
+      </div>
+    );
+  }
+
   return (
     <NotificationProvider>
       <div className="relative min-h-screen bg-black text-white font-sans overflow-hidden select-none">
         <AnimatePresence mode="wait">
-          
+         
           {stage === 'LOGIN' && (
-            <motion.div 
+            <motion.div
               key="login"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -94,7 +113,6 @@ export default function Page() {
                <LoginPanel onLoginSuccess={handleLoginSuccess} />
             </motion.div>
           )}
-
           {stage === 'ONBOARDING' && userId && (
             <motion.div
                key="onboarding"
@@ -105,9 +123,8 @@ export default function Page() {
                <OnboardingSequence userId={userId} onComplete={handleOnboardingComplete} />
             </motion.div>
           )}
-
           {stage === 'DASHBOARD' && userId && (
-            <motion.div 
+            <motion.div
               key="dashboard"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -117,7 +134,6 @@ export default function Page() {
                <DashboardShell userId={userId} />
             </motion.div>
           )}
-
         </AnimatePresence>
       </div>
     </NotificationProvider>

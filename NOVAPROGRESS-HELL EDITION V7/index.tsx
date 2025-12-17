@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Page from './app/page';
-import { AuthProvider } from './src/auth/AuthContext.tsx'; // ← FIXED: Correct path to your file
+import { AuthProvider } from './src/auth/AuthContext.tsx'; // ← Correct path to your file location
 
 // We import page from app/page which acts as the new App root.
 const rootElement = document.getElementById('root');
@@ -11,7 +11,7 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <AuthProvider> {/* ← Keeps the wrapper for auth loading fix */}
+    <AuthProvider>
       <Page />
     </AuthProvider>
   </React.StrictMode>

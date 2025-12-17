@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabaseClient'; // ← Correct path from src/context to lib
+import { supabase } from '../lib/supabaseClient';
 
 interface AuthContextType {
   session: Session | null;
@@ -17,13 +17,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    let mounted = true;
 
-    // Listen for any auth changes (login, logout, token refresh, etc.)
+    const initAuth = async () => {
+      try {
+        // ✅ IMPORTANT: handle OAuth callback first (Google redirect)
+        const { data } = await supabase.auth.getSessionFromUrl({
+          storeSession: true,
+        });
+
+        if (!mounted) return;
+
+        if (data?.session) {
+          setSession(data.session);
+          setLoading(false);
+          return;
+        }
+
+        // ✅ Normal session restore (refresh / direct visit)
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!mounted) return;
+
+        setSession(sessionData.session);
+        setLoading(false);
+      } catch {
+        // Fallback: never block app
+        if (mounted) setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // ✅ Keep listening to auth changes (login, logout, refresh)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -32,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -43,5 +69,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Hook for easy use in components (you don't need it in page.tsx, but good to have)
 export const useAuth = () => useContext(AuthContext);

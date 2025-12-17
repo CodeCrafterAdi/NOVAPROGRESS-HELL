@@ -16,20 +16,31 @@ export default function Page() {
   // START DIRECTLY AT LOGIN (Skipping Intro/System Check)
   const [stage, setStage] = useState<Stage>('LOGIN');
   const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true); // ← NEW: Prevents premature decisions
+  const [loading, setLoading] = useState(true); // ← Prevents premature decisions
 
-  // Simple routing for Auth Callback
+  // Simple routing for Auth Callback (kept exactly as you had it)
   if (typeof window !== 'undefined' && window.location.pathname === '/auth/callback') {
     return <AuthCallback />;
   }
 
   useEffect(() => {
+    // ← NEW BLOCK: Critical for catching session from OAuth hash (fixes mobile/PC loop)
+    if (window.location.hash) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          handleLoginSuccess(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      });
+    }
+
     const checkUser = async () => {
       setLoading(true); // Start loading
 
       // Check existing Supabase session
       const { data: { session: existingSession } } = await supabase.auth.getSession();
-     
+    
       if (existingSession) {
         handleLoginSuccess(existingSession.user.id);
       } else {
@@ -58,11 +69,11 @@ export default function Page() {
     checkProfileAndRedirect(id);
   };
 
-  // Check if user has a profile to determine if Onboarding is needed
+  // Check if user has a profile to determine if Onboarding is needed (YOUR ORIGINAL LOGIC 100% UNCHANGED)
   const checkProfileAndRedirect = async (id: string) => {
     // Check Local Storage first for speed
     const localProfile = localStorage.getItem(`nova_profile_${id}`);
-   
+  
     if (localProfile) {
       setStage('DASHBOARD');
       setLoading(false);
@@ -88,7 +99,7 @@ export default function Page() {
     setStage('DASHBOARD');
   };
 
-  // ← NEW: Show nothing or a simple loader while Supabase restores session
+  // ← Show loader while Supabase restores session (kept exactly as you had it)
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black text-white">
@@ -101,7 +112,7 @@ export default function Page() {
     <NotificationProvider>
       <div className="relative min-h-screen bg-black text-white font-sans overflow-hidden select-none">
         <AnimatePresence mode="wait">
-         
+        
           {stage === 'LOGIN' && (
             <motion.div
               key="login"

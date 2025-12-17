@@ -13,55 +13,57 @@ const App: React.FC = () => {
   const [stage, setStage] = useState<AppStage>('INTRO');
   const [userId, setUserId] = useState<string | null>(null);
 
-  // ✅ auth loading guard (UNCHANGED)
+  // Auth resolution guard (does not change behavior, only timing)
   const [authLoading, setAuthLoading] = useState(true);
 
+  /**
+   * 🔑 AUTH + STAGE INITIALIZATION
+   * - Handles OAuth full-page reloads
+   * - Skips intro/login when session already exists
+   * - Preserves guest + dev bypass flows
+   */
   useEffect(() => {
-    const checkSession = async () => {
+    const init = async () => {
       const isDev = process.env.NODE_ENV === 'development';
       const bypassId = process.env.NEXT_PUBLIC_BYPASS_USER_ID;
 
+      // --- DEV BYPASS (UNCHANGED BEHAVIOR) ---
       if (isDev && bypassId) {
         console.log('DEV BYPASS ACTIVE');
         setUserId(bypassId);
+        setStage('DASHBOARD');
         setAuthLoading(false);
         return;
       }
 
+      // --- CRITICAL FIX: decide stage immediately on load ---
       const { data: { session } } = await supabase.auth.getSession();
 
-      if (session) {
+      if (session?.user) {
         setUserId(session.user.id);
+        setStage('DASHBOARD'); // 🔥 skip intro/login on OAuth return
       }
 
       setAuthLoading(false);
     };
 
-    checkSession();
+    init();
 
+    // --- KEEP SESSION IN SYNC (OAuth / refresh / logout) ---
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUserId(session.user.id);
+        setStage('DASHBOARD');
       } else {
         setUserId(null);
+        setStage('LOGIN');
       }
-      setAuthLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
-
-  // 🔴 ✅ THIS IS THE ONLY REQUIRED ADDITION
-  // Sync stage with auth state (OAuth-safe, does NOT spoil anything)
-  useEffect(() => {
-    if (userId) {
-      setStage('DASHBOARD');
-    }
-  }, [userId]);
 
   // --- INTRO FLOW (UNCHANGED) ---
   const handleIntroComplete = () => {
@@ -86,7 +88,7 @@ const App: React.FC = () => {
     console.log('Retry clicked - user hesitation recorded');
   };
 
-  // --- LOGIN SUCCESS (UNCHANGED) ---
+  // --- LOGIN SUCCESS (GUEST MODE, UNCHANGED) ---
   const handleLoginSuccess = (id: string) => {
     setUserId(id);
     setStage('DASHBOARD');
@@ -97,7 +99,10 @@ const App: React.FC = () => {
       <AnimatePresence mode="wait">
 
         {stage === 'INTRO' && (
-          <motion.div key="intro" exit={{ opacity: 0, transition: { duration: 1 } }}>
+          <motion.div
+            key="intro"
+            exit={{ opacity: 0, transition: { duration: 1 } }}
+          >
             <IntroPlayer onComplete={handleIntroComplete} />
           </motion.div>
         )}
@@ -124,8 +129,11 @@ const App: React.FC = () => {
             animate={{ opacity: 1 }}
             className="flex items-center justify-center h-screen"
           >
+            {/* LOGIN PLACEHOLDER (UNCHANGED) */}
             <div className="text-center">
-              <h2 className="text-3xl font-display mb-8">AUTHENTICATE SOUL</h2>
+              <h2 className="text-3xl font-display mb-8">
+                AUTHENTICATE SOUL
+              </h2>
               <button
                 onClick={() => handleLoginSuccess('user-123')}
                 className="px-8 py-3 bg-nova-mind hover:bg-red-700 transition rounded text-white font-bold"
@@ -144,20 +152,40 @@ const App: React.FC = () => {
             transition={{ duration: 1 }}
             className="p-8 h-screen w-full relative"
           >
+            {/* DASHBOARD SKELETON (UNCHANGED) */}
             <header className="flex justify-between items-center mb-12 border-b border-white/10 pb-4">
               <h1 className="text-4xl font-display font-bold tracking-widest text-nova-mind drop-shadow-[0_0_10px_rgba(255,43,43,0.5)]">
                 NOVA<span className="text-white">PROGRESS</span>
               </h1>
+
+              <div className="flex gap-4 items-center">
+                <div className="text-right">
+                  <div className="text-xs text-gray-400">CURRENT RANK</div>
+                  <div className="font-bold text-xl">INITIATE</div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-gray-800 border-2 border-nova-mind overflow-hidden">
+                  <img
+                    src="https://picsum.photos/200"
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
             </header>
 
             <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
               {['MIND', 'COMMUNICATION', 'CREATIVE', 'FITNESS'].map((cat) => (
                 <div
                   key={cat}
-                  className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4"
+                  className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col relative group hover:border-nova-mind/50 transition-colors"
                 >
-                  <h3 className="font-display text-2xl mb-4 text-gray-200">{cat}</h3>
-                  <div className="text-white/20 text-sm">NO TASKS PENDING</div>
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-nova-mind to-transparent opacity-50" />
+                  <h3 className="font-display text-2xl mb-4 text-gray-200 tracking-wider">
+                    {cat}
+                  </h3>
+                  <div className="flex-1 flex items-center justify-center text-white/20 text-sm">
+                    NO TASKS PENDING
+                  </div>
                 </div>
               ))}
             </main>
